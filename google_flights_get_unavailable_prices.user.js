@@ -13,6 +13,8 @@
 
 console.debug("jme begin");
 
+// TODO: once find dominatedList, do new MutationObserver that observes dominatedList but not its children?
+
 (new MutationObserver(checkForResults)).observe(
   document,
   {childList: true, subtree: true});
@@ -30,8 +32,7 @@ GM.xmlHttpRequest({
   }
 });
 */
-
-/* // southwest URL for later reference
+/*
 var southwestUrl = "https://www.southwest.com/air/booking/select.html"
   + "?originationAirportCode=HOU"
   + "&destinationAirportCode=FLL"
@@ -55,7 +56,7 @@ var southwestUrl = "https://www.southwest.com/air/booking/select.html"
 function checkForResults(changes, observer)
 {
   //console.debug("jme checkForResults begin");
-  var dominatedList = document.querySelector('ol.gws-flights-results__has-dominated');
+  var dominatedList = document.querySelector("ol.gws-flights-results__has-dominated");
 
   if(dominatedList)
   {
@@ -100,8 +101,18 @@ function modifySouthwestEntry(flightListItem)
   {
     var priceNode = priceXpathResult.snapshotItem(priceIdx);
     priceNode.innerText = "PRICE_GOES_HERE_" + priceIdx;
+  }  
+  
+  var flightIdSpan = flightListItem.querySelector("div.gws-flights-results__aircraft-type ~ span > span:last-child");
+  
+  if(!flightIdSpan)
+  {
+    console.error("jme could not find flight id span");
+    console.error(flightListItem);
   }
-
+  
+  console.debug("jme flight id = " + flightIdSpan.innerText);
+  
   console.debug("jme modifySouthwestEntry end");
 }
 
