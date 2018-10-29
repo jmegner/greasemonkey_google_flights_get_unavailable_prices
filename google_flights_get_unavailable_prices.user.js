@@ -11,11 +11,9 @@
 // @run-at      document-end
 // ==/UserScript==
 
-console.debug("jme begin");
+console.debug("jme main begin");
 
-// TODO: once find dominatedList, do new MutationObserver that observes dominatedList but not its children?
-
-(new MutationObserver(checkForResults)).observe(
+(new MutationObserver(checkForInitialResults)).observe(
   document,
   {childList: true, subtree: true});
 
@@ -53,20 +51,55 @@ var southwestUrl = "https://www.southwest.com/air/booking/select.html"
   + "&leapfrogRequest=true";
 */
 
-function checkForResults(changes, observer)
+function getDominatedList()
 {
-  //console.debug("jme checkForResults begin");
-  var dominatedList = document.querySelector("ol.gws-flights-results__has-dominated");
+  return document.querySelector("ol.gws-flights-results__has-dominated");
+}
+
+function checkForInitialResults(changes, observer)
+{
+  //console.debug("jme checkForInitialResults begin");
+  var dominatedList = getDominatedList();
 
   if(dominatedList)
   {
     observer.disconnect();
+    
+    var divForFuturemonitoring = dominatedList.parentElement.parentElement;
+    (new MutationObserver(checkForModifiedResults)).observe(
+      divForFuturemonitoring,
+      {childList: true, subtree: false});
+    
+    console.debug("jme relevant mutation list");
+    console.debug(changes);
     modifySouthwestEntries(dominatedList);
   }
 
-  //console.debug("jme checkForResults end")
+  //console.debug("jme checkForInitialResults end")
 }
 
+function checkForModifiedResults(changes, observer)
+{
+  console.debug("jme checkForModifiedResults begin");
+  //console.debug(changes);
+  
+  for(var changeIdx = 0; changeIdx < changes.length; changeIdx++)
+  {
+    var change = changes[changeIdx];    
+    console.debug(change);
+    
+    if(change.addedNodes)
+    {
+      var dominatedList = getDominatedList();
+      if(dominatedList)
+      {
+        modifySouthwestEntries(dominatedList);
+      }
+      break;
+    }
+  }
+  console.debug("jme checkForModifiedResults end")
+}
 
 function modifySouthwestEntries(dominatedList)
 {
@@ -117,4 +150,4 @@ function modifySouthwestEntry(flightListItem)
 }
 
 
-console.debug("jme end");
+console.debug("jme main end");
