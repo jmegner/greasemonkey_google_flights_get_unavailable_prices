@@ -13,7 +13,7 @@
 
 console.debug("jme main begin");
 
-(new MutationObserver(checkForInitialResults)).observe(
+(new MutationObserver(makeLogWrappedCallback(checkForInitialResults))).observe(
   document,
   {childList: true, subtree: true});
 
@@ -30,6 +30,7 @@ GM.xmlHttpRequest({
   }
 });
 */
+
 /*
 var southwestUrl = "https://www.southwest.com/air/booking/select.html"
   + "?originationAirportCode=HOU"
@@ -51,6 +52,25 @@ var southwestUrl = "https://www.southwest.com/air/booking/select.html"
   + "&leapfrogRequest=true";
 */
 
+
+function execLogWrappedFunc(funcToWrap, ...funcArgs)
+{
+  try
+  {
+    return funcToWrap(...funcArgs);
+  }
+  catch(err)
+  {
+    console.error(err);
+    throw err;
+  }
+}
+
+function makeLogWrappedCallback(funcToWrap)
+{
+  return function(...funcArgs) { return execLogWrappedFunc(funcToWrap, ...funcArgs); };
+}
+
 function getDominatedList()
 {
   return document.querySelector("ol.gws-flights-results__has-dominated");
@@ -58,35 +78,29 @@ function getDominatedList()
 
 function checkForInitialResults(changes, observer)
 {
-  //console.debug("jme checkForInitialResults begin");
   var dominatedList = getDominatedList();
 
   if(dominatedList)
   {
     observer.disconnect();
     
-    var divForFuturemonitoring = dominatedList.parentElement.parentElement;
-    (new MutationObserver(checkForModifiedResults)).observe(
-      divForFuturemonitoring,
+    var divForFutureMonitoring = dominatedList.parentElement.parentElement;
+    (new MutationObserver(makeLogWrappedCallback(checkForModifiedResults))).observe(
+      divForFutureMonitoring,
       {childList: true, subtree: false});
     
-    console.debug("jme relevant mutation list");
-    console.debug(changes);
+    console.debug("jme initial relevant mutation list", changes);
     modifySouthwestEntries(dominatedList);
   }
-
-  //console.debug("jme checkForInitialResults end")
 }
 
 function checkForModifiedResults(changes, observer)
 {
-  console.debug("jme checkForModifiedResults begin");
-  //console.debug(changes);
+  //console.debug("jme checkForModifiedResults changes", changes);
   
   for(var changeIdx = 0; changeIdx < changes.length; changeIdx++)
   {
-    var change = changes[changeIdx];    
-    console.debug(change);
+    var change = changes[changeIdx];
     
     if(change.addedNodes)
     {
@@ -98,33 +112,31 @@ function checkForModifiedResults(changes, observer)
       break;
     }
   }
-  console.debug("jme checkForModifiedResults end")
 }
 
 function modifySouthwestEntries(dominatedList)
 {
-  console.debug("jme modifySouthwestEntries begin");
-
   var southwestFlightXPathResult = document.evaluate(
     ".//li[contains(@class, 'gws-flights-results__result-item') and contains(.//span, 'Southwest')]",
     dominatedList, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
 
-  console.debug("jme found " + southwestFlightXPathResult.snapshotLength + " flights");
+  console.debug("jme modifySouthwestEntries found " + southwestFlightXPathResult.snapshotLength + " flights");
 
   for(var snapshotIdx = 0; snapshotIdx < southwestFlightXPathResult.snapshotLength; snapshotIdx++)
   {
     var southwestFlightListItem = southwestFlightXPathResult.snapshotItem(snapshotIdx);
     modifySouthwestEntry(southwestFlightListItem);
   }
-
-  console.debug("jme modifySouthwestEntries end");
 }
-
 
 function modifySouthwestEntry(flightListItem)
 {
-  console.debug("jme modifySouthwestEntry begin");
-  console.debug(flightListItem);
+  console.debug("jme modifySouthwestEntry flightListItem", flightListItem);
+  
+  if ( typeof modifySouthwestEntry.priceCounter == 'undefined' )
+  {
+    modifySouthwestEntry.priceCounter = 0;
+  }
 
   var priceXpathResult = document.evaluate(
     ".//jsl[text()='Price unavailable']",
@@ -133,20 +145,18 @@ function modifySouthwestEntry(flightListItem)
   for(var priceIdx = 0; priceIdx < priceXpathResult.snapshotLength; priceIdx++)
   {
     var priceNode = priceXpathResult.snapshotItem(priceIdx);
-    priceNode.innerText = "PRICE_GOES_HERE_" + priceIdx;
+    priceNode.innerText = "PRICE_GOES_HERE_" + modifySouthwestEntry.priceCounter;
+    modifySouthwestEntry.priceCounter++;
   }  
   
   var flightIdSpan = flightListItem.querySelector("div.gws-flights-results__aircraft-type ~ span > span:last-child");
   
   if(!flightIdSpan)
   {
-    console.error("jme could not find flight id span");
-    console.error(flightListItem);
+    console.error("jme could not find flight id span in flightListItem", flightListItem);
   }
   
   console.debug("jme flight id = " + flightIdSpan.innerText);
-  
-  console.debug("jme modifySouthwestEntry end");
 }
 
 
