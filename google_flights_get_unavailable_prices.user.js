@@ -24,7 +24,9 @@ GM.xmlHttpRequest({
   onload: function(response) {
     console.debug("jme response...");
     console.debug(response);
-    var responseDom = new DOMParser().parseFromString(response.responseText, "text/html");
+    var responseDom = new DOMParser().parseFromString(
+      response.responseText,
+      "text/html");
     console.debug("jme parsed response...");
     console.debug(responseDom);
   }
@@ -50,6 +52,23 @@ var southwestUrl = "https://www.southwest.com/air/booking/select.html"
   + "&redirectToVision=true"
   + "&int=HOMEQBOMAIR"
   + "&leapfrogRequest=true";
+*/
+
+/*
+// some notes and code for getting flight prices from Southwest page...
+
+//auto-generated CSS selector for ul element that contains departing flight list items
+//#air-booking-product-0 > div:nth-child(6) > span:nth-child(2) > ul:nth-child(1)
+
+var departingFlightList = document.querySelector("#air-booking-product-0 .transition-content ul");
+var returningFlightList = document.querySelector("#air-booking-product-1 .transition-content ul");
+
+//under flight item (li), want to get text of span with class fare-button--value-total
+var priceSpans = flightItem.querySelectorAll("span.fare-button--value-total"); // yields NodeList of length 3 or less (some may be sold out)
+var price0 = parseFloat(priceSpans[0].innerText); // but do this in for-loop
+
+// beginners might want to google "Math.min", "spread operator", "Array.from", "Array.map", "arrow function"
+var flightMinPrice = Math.min(...Array.from(priceSpans).map(x => parseFloat(x.innerText)));
 */
 
 
@@ -96,7 +115,7 @@ function checkForInitialResults(changes, observer)
 
 function checkForModifiedResults(changes, observer)
 {
-  //console.debug("jme checkForModifiedResults changes", changes);
+  console.debug("jme checkForModifiedResults changes", changes);
   
   for(var changeIdx = 0; changeIdx < changes.length; changeIdx++)
   {
