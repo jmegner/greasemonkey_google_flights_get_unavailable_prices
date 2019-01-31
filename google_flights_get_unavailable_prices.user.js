@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name        google_flights_get_unavailable_prices
 // @namespace   https://github.com/jmegner
-// @version     0.1
+// @version     0.2
 // @description for getting unavailable prices for google flights results
 // @license     Unlicense
 // @homepageURL https://github.com/jmegner/greasemonkey_google_flights_get_unavailable_prices
@@ -11,36 +11,21 @@
 // @run-at      document-end
 // ==/UserScript==
 
+"use strict";
 console.debug("jme main begin");
 
 (new MutationObserver(makeLogWrappedCallback(checkForInitialResults))).observe(
   document,
   {childList: true, subtree: true});
 
-/* // example page request for later reference
-GM.xmlHttpRequest({
-  method: "GET",
-  url: "http://www.google.com/",
-  onload: function(response) {
-    console.debug("jme response...");
-    console.debug(response);
-    var responseDom = new DOMParser().parseFromString(
-      response.responseText,
-      "text/html");
-    console.debug("jme parsed response...");
-    console.debug(responseDom);
-  }
-});
-*/
-
 /*
 var southwestUrl = "https://www.southwest.com/air/booking/select.html"
   + "?originationAirportCode=HOU"
   + "&destinationAirportCode=FLL"
   + "&returnAirportCode="
-  + "&departureDate=2018-11-07"
+  + "&departureDate=2019-03-01"
   + "&departureTimeOfDay=ALL_DAY"
-  + "&returnDate=2018-11-11"
+  + "&returnDate=2019-04-01"
   + "&returnTimeOfDay=ALL_DAY"
   + "&adultPassengersCount=1"
   + "&seniorPassengersCount=0"
@@ -52,6 +37,20 @@ var southwestUrl = "https://www.southwest.com/air/booking/select.html"
   + "&redirectToVision=true"
   + "&int=HOMEQBOMAIR"
   + "&leapfrogRequest=true";
+  
+GM.xmlHttpRequest({
+  method: "GET",
+  url: southwestUrl,
+  onload: function(response) {
+    console.debug("jme response...");
+    console.debug(response);
+    var responseDom = new DOMParser().parseFromString(
+      response.responseText,
+      "text/html");
+    console.debug("jme parsed response...");
+    console.debug(responseDom);
+  }
+});  
 */
 
 /*
@@ -140,11 +139,14 @@ function modifySouthwestEntries(dominatedList)
     dominatedList, null, XPathResult.ORDERED_NODE_SNAPSHOT_TYPE, null);
 
   console.debug("jme modifySouthwestEntries found " + southwestFlightXPathResult.snapshotLength + " flights");
+  
+  var seenAirportPairs = {};
 
   for(var snapshotIdx = 0; snapshotIdx < southwestFlightXPathResult.snapshotLength; snapshotIdx++)
   {
     var southwestFlightListItem = southwestFlightXPathResult.snapshotItem(snapshotIdx);
-    modifySouthwestEntry(southwestFlightListItem);
+    //modifySouthwestEntry(southwestFlightListItem);
+    actOnSouthwestEntry(southwestFlightListItem, seenAirportPairs);
   }
 }
 
@@ -166,7 +168,7 @@ function modifySouthwestEntry(flightListItem)
     var priceNode = priceXpathResult.snapshotItem(priceIdx);
     priceNode.innerText = "PRICE_GOES_HERE_" + modifySouthwestEntry.priceCounter;
     modifySouthwestEntry.priceCounter++;
-  }  
+  }
   
   var flightIdSpan = flightListItem.querySelector("div.gws-flights-results__aircraft-type ~ span > span:last-child");
   
@@ -178,5 +180,44 @@ function modifySouthwestEntry(flightListItem)
   console.debug("jme flight id = " + flightIdSpan.innerText);
 }
 
+function actOnSouthwestEntry(flightListItem, seenAirportPairs)
+{
+  var src = flightListItem.querySelector("div.gws-flights-results__airports.flt-caption span:nth-child(1)").innerText;
+  var dst = flightListItem.querySelector("div.gws-flights-results__airports.flt-caption span:nth-child(2)").innerText;
+  var pair = src + "-" + dst;
+  
+  console.debug(pair, pair in seenAirportPairs ? "seen" : "new");
+  
+  if(pair in seenAirportPairs)
+  {
+    return;
+  }
+  
+  seenAirportPairs[pair] = flightListItem;
+  
+  var flightDates = document.location.href.match(/\d\d\d\d-\d\d-\d\d/g);
+  console.debug(flightDates);
+  
+  var southwestUrl = "https://www.southwest.com/air/booking/select.html"
+    + "?originationAirportCode=" + src
+    + "&destinationAirportCode=" + dst
+    + "&returnAirportCode="
+    + "&departureDate=" + flightDates[0]
+    + "&departureTimeOfDay=ALL_DAY"
+    + "&returnDate=" + flightDates[1]
+    + "&returnTimeOfDay=ALL_DAY"
+    + "&adultPassengersCount=1"
+    + "&seniorPassengersCount=0"
+    + "&fareType=USD"
+    + "&passengerType=ADULT"
+    + "&tripType=roundtrip"
+    + "&promoCode="
+    + "&reset=true"
+    + "&redirectToVision=true"
+    + "&int=HOMEQBOMAIR"
+    + "&leapfrogRequest=true";
+  
+  window.open(southwestUrl); // be sure to allow the popup
+}
 
 console.debug("jme main end");
